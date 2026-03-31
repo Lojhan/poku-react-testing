@@ -1,4 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
+import { parseRuntimeOptions } from './runtime-options.ts';
 
 declare const Deno: unknown;
 
@@ -8,8 +9,7 @@ type ReactActGlobal = typeof globalThis & {
 
 const reactGlobal = globalThis as ReactActGlobal;
 
-const defaultUrl = 'http://localhost:3000/';
-const configuredUrl = process.env.POKU_REACT_DOM_URL || defaultUrl;
+const configuredUrl = parseRuntimeOptions().domUrl;
 
 if (!globalThis.window || !globalThis.document) {
   const isDenoRuntime = typeof Deno !== 'undefined';
@@ -23,7 +23,8 @@ if (!globalThis.window || !globalThis.document) {
   });
 
   if (isDenoRuntime) {
-    if (nativeEvent) (globalThis as unknown as Record<string, unknown>).Event = nativeEvent;
+    if (nativeEvent)
+      (globalThis as unknown as Record<string, unknown>).Event = nativeEvent;
     if (nativeDispatchEvent) globalThis.dispatchEvent = nativeDispatchEvent;
   }
 }

@@ -1,12 +1,12 @@
 import { afterEach, assert, test } from 'poku';
-import { useMemo, useState } from 'react';
 import {
   cleanup,
   fireEvent,
   render,
   renderHook,
   screen,
-} from '../src/index.ts';
+} from 'poku-react-testing';
+import React, { useMemo, useState } from 'react';
 
 afterEach(cleanup);
 
@@ -47,12 +47,9 @@ test('tests custom hooks through a component harness', () => {
 });
 
 test('tests hook logic directly with renderHook', () => {
-  const { result } = renderHook(
-    ({ initial }: { initial: boolean }) => useToggle(initial),
-    {
-      initialProps: { initial: true },
-    }
-  );
+  const { result } = renderHook(({ initial }) => useToggle(initial), {
+    initialProps: { initial: true },
+  });
 
   assert.strictEqual(result.current.enabled, true);
 });

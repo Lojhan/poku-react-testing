@@ -1,13 +1,15 @@
-import React, { type ComponentType, type PropsWithChildren, type ReactElement } from 'react';
-import {
-  getQueriesForElement,
-  type BoundFunctions,
-  type Screen,
-  type fireEvent as baseFireEvent,
-  queries,
+import type {
+  fireEvent as baseFireEvent,
+  BoundFunctions,
+  Screen,
 } from '@testing-library/dom';
+import type { ComponentType, PropsWithChildren, ReactElement } from 'react';
+import type { Root } from 'react-dom/client';
+import { getQueriesForElement, queries } from '@testing-library/dom';
 import * as domTestingLibrary from '@testing-library/dom';
-import { createRoot, type Root } from 'react-dom/client';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { parseRuntimeOptions } from './runtime-options.ts';
 
 const { act } = React;
 
@@ -17,17 +19,17 @@ export { act };
 type WrapperComponent = ComponentType<PropsWithChildren<unknown>>;
 
 type InternalMounted = {
-  root: Root;
-  container: Element;
+  root: Root | null;
+  container: Element | null;
   ownsContainer: boolean;
 };
 
 const mountedRoots = new Set<InternalMounted>();
 
-const getNow = () =>
+const getNow: () => number =
   typeof performance !== 'undefined' && typeof performance.now === 'function'
-    ? performance.now()
-    : Date.now();
+    ? performance.now.bind(performance)
+    : Date.now.bind(Date);
 
 const getComponentName = (ui: ReactElement) => {
   const uiType = ui.type;
@@ -38,22 +40,101 @@ const getComponentName = (ui: ReactElement) => {
   return typed.displayName || typed.name || 'AnonymousComponent';
 };
 
-const emitRenderMetric = (componentName: string, durationMs: number) => {
-  const metricsEnabled = process.env.POKU_REACT_ENABLE_METRICS === '1';
-  if (!metricsEnabled) return;
-  if (typeof process.send !== 'function') return;
+const runtimeOptions = parseRuntimeOptions();
+const metricsEnabled = runtimeOptions.metricsEnabled;
+const minMetricMs = runtimeOptions.minMetricMs;
 
-  const safeDuration = Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
+type QueuedRenderMetric = {
+  componentName: string;
+  durationMs: number;
+};
+
+const metricBuffer: QueuedRenderMetric[] = [];
+let metricFlushTimer: ReturnType<typeof setTimeout> | undefined;
+let metricsChannelClosed = false;
+
+const flushMetricBuffer = () => {
+  if (!metricsEnabled || typeof process.send !== 'function') return;
+
+  if (process.connected === false) {
+    metricBuffer.length = 0;
+    metricsChannelClosed = true;
+    return;
+  }
+
+  if (metricsChannelClosed || metricBuffer.length === 0) return;
+
+  const payload = metricBuffer.splice(0, metricBuffer.length);
 
   try {
     process.send({
-      type: 'POKU_REACT_RENDER_METRIC',
-      componentName,
-      durationMs: safeDuration,
+      type: 'POKU_REACT_RENDER_METRIC_BATCH',
+      metrics: payload,
     });
   } catch {
-    // Ignore IPC failures when the process channel is already closed.
+    metricsChannelClosed = true;
+    metricBuffer.length = 0;
   }
+};
+
+const clearMetricFlushTimer = () => {
+  if (!metricFlushTimer) return;
+  clearTimeout(metricFlushTimer);
+  metricFlushTimer = undefined;
+};
+
+const scheduleMetricFlush = () => {
+  if (metricFlushTimer) return;
+
+  metricFlushTimer = setTimeout(() => {
+    metricFlushTimer = undefined;
+    flushMetricBuffer();
+  }, runtimeOptions.metricFlushMs);
+
+  metricFlushTimer.unref?.();
+};
+
+if (metricsEnabled) {
+  process.on('beforeExit', () => {
+    clearMetricFlushTimer();
+    flushMetricBuffer();
+  });
+
+  process.on('disconnect', () => {
+    clearMetricFlushTimer();
+    metricBuffer.length = 0;
+    metricsChannelClosed = true;
+  });
+}
+
+const emitRenderMetric = (componentName: string, durationMs: number) => {
+  if (!metricsEnabled || typeof process.send !== 'function') return;
+
+  if (process.connected === false || metricsChannelClosed) {
+    metricBuffer.length = 0;
+    metricsChannelClosed = true;
+    clearMetricFlushTimer();
+    return;
+  }
+
+  const safeDuration =
+    Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
+
+  // Optimization: Drop metrics below the threshold to prevent IPC flooding
+  if (safeDuration < minMetricMs) return;
+
+  metricBuffer.push({
+    componentName,
+    durationMs: safeDuration,
+  });
+
+  if (metricBuffer.length >= runtimeOptions.metricBatchSize) {
+    clearMetricFlushTimer();
+    flushMetricBuffer();
+    return;
+  }
+
+  scheduleMetricFlush();
 };
 
 const wrapUi = (ui: ReactElement, Wrapper?: WrapperComponent) =>
@@ -76,7 +157,10 @@ export type RenderResult = BoundFunctions<typeof queries> & {
 /**
  * Render a React element in an isolated container and return bound DOM queries.
  */
-export const render = (ui: ReactElement, options: RenderOptions = {}): RenderResult => {
+export const render = (
+  ui: ReactElement,
+  options: RenderOptions = {}
+): RenderResult => {
   const baseElement = options.baseElement || document.body;
   const container = options.container || document.createElement('div');
   const ownsContainer = !options.container;
@@ -103,15 +187,19 @@ export const render = (ui: ReactElement, options: RenderOptions = {}): RenderRes
   const unmount = () => {
     if (!mountedRoots.has(mounted)) return;
 
-    act(() => {
-      root.unmount();
-    });
+    try {
+      act(() => {
+        mounted.root?.unmount();
+      });
+    } finally {
+      if (mounted.ownsContainer && mounted.container?.parentNode) {
+        mounted.container.parentNode.removeChild(mounted.container);
+      }
 
-    if (mounted.ownsContainer && container.parentNode) {
-      container.parentNode.removeChild(container);
+      mounted.root = null;
+      mounted.container = null;
+      mountedRoots.delete(mounted);
     }
-
-    mountedRoots.delete(mounted);
   };
 
   const rerender = (nextUi: ReactElement) => {
@@ -149,9 +237,12 @@ export type RenderHookResult<Result, Props = unknown> = {
 /**
  * Render a hook directly and expose the latest hook value via `result.current`.
  */
-export const renderHook = <Result, Props extends Record<string, unknown> = Record<string, unknown>>(
+export const renderHook = <
+  Result,
+  Props extends Record<string, unknown> = Record<string, unknown>,
+>(
   hook: (props: Props) => Result,
-  options: RenderHookOptions<Props> = {},
+  options: RenderHookOptions<Props> = {}
 ): RenderHookResult<Result, Props> => {
   let currentResult!: Result;
 
@@ -160,7 +251,7 @@ export const renderHook = <Result, Props extends Record<string, unknown> = Recor
     return null;
   };
 
-  const initialProps = (options.initialProps || ({} as Props));
+  const initialProps = options.initialProps || ({} as Props);
   const view = render(React.createElement(HookHarness, initialProps), options);
 
   return {
@@ -178,54 +269,88 @@ export const renderHook = <Result, Props extends Record<string, unknown> = Recor
  * Unmount all rendered roots and remove owned containers from the document.
  */
 export const cleanup = () => {
-  for (const mounted of [...mountedRoots]) {
-    act(() => {
-      mounted.root.unmount();
-    });
+  const mountedEntries = [...mountedRoots];
 
-    if (mounted.ownsContainer && mounted.container.parentNode) {
-      mounted.container.parentNode.removeChild(mounted.container);
+  for (const mounted of mountedEntries) {
+    try {
+      act(() => {
+        mounted.root?.unmount();
+      });
+    } finally {
+      if (mounted.ownsContainer && mounted.container?.parentNode) {
+        mounted.container.parentNode.removeChild(mounted.container);
+      }
+
+      mounted.root = null;
+      mounted.container = null;
+      mountedRoots.delete(mounted);
     }
-
-    mountedRoots.delete(mounted);
   }
+
+  flushMetricBuffer();
 };
 
 /**
  * Global Testing Library `screen` bound to `document.body`.
  */
-export const screen = new Proxy({} as Screen, {
-  get(_, key: PropertyKey) {
-    const queries = getQueriesForElement(document.body) as Record<PropertyKey, unknown>;
-    const value = queries[key];
-    return typeof value === 'function' ? value.bind(queries) : value;
-  },
-}) as Screen;
+const baseScreenQueries = getQueriesForElement(document.body) as Record<
+  string,
+  unknown
+>;
+
+const boundScreenQueries: Record<string, unknown> = {};
+for (const key of Object.keys(baseScreenQueries)) {
+  const value = baseScreenQueries[key];
+  boundScreenQueries[key] =
+    typeof value === 'function'
+      ? (value as (...args: unknown[]) => unknown).bind(baseScreenQueries)
+      : value;
+}
+
+export const screen = boundScreenQueries as Screen;
 
 /**
  * Testing Library `fireEvent` wrapped in React `act` for synchronous state flushing.
  */
-export const fireEvent = new Proxy(domTestingLibrary.fireEvent, {
-  get(target, key: keyof typeof domTestingLibrary.fireEvent) {
-    const value = target[key];
-    if (typeof value !== 'function') return value;
+const baseFireEventInstance = domTestingLibrary.fireEvent;
 
-    return (...args: unknown[]) => {
-      let result: unknown;
-      act(() => {
-        result = Reflect.apply(value as (...innerArgs: unknown[]) => unknown, target, args);
-      });
-      return result;
-    };
-  },
+const wrappedFireEvent = ((...args: Parameters<typeof baseFireEvent>) => {
+  let result!: ReturnType<typeof baseFireEvent>;
+  act(() => {
+    result = baseFireEventInstance(...args);
+  });
+  return result;
+}) as typeof baseFireEvent;
 
-  apply(target, thisArg, args) {
+for (const key of Object.keys(baseFireEventInstance) as Array<
+  keyof typeof baseFireEventInstance
+>) {
+  const value = baseFireEventInstance[key];
+
+  if (typeof value !== 'function') {
+    (
+      wrappedFireEvent as unknown as Record<
+        keyof typeof baseFireEventInstance,
+        unknown
+      >
+    )[key] = value;
+    continue;
+  }
+
+  (
+    wrappedFireEvent as unknown as Record<
+      keyof typeof baseFireEventInstance,
+      unknown
+    >
+  )[key] = (...args: unknown[]) => {
     let result: unknown;
     act(() => {
-      result = Reflect.apply(target, thisArg, args);
+      result = Reflect.apply(value, baseFireEventInstance, args);
     });
     return result;
-  },
-}) as typeof baseFireEvent;
+  };
+}
+
+export const fireEvent = wrappedFireEvent;
 
 export * from '@testing-library/dom';

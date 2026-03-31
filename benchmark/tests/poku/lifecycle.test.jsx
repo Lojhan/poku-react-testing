@@ -1,10 +1,10 @@
 import { afterEach, assert, test } from 'poku';
-import { useEffect } from 'react';
-import { cleanup, render, screen } from '../src/index.ts';
+import { cleanup, render, screen } from 'poku-react-testing';
+import React, { useEffect } from 'react';
 
 afterEach(cleanup);
 
-const Greeting = ({ name }: { name: string }) => <h3>Hello {name}</h3>;
+const Greeting = ({ name }) => <h3>Hello {name}</h3>;
 
 test('rerender updates component props in place', () => {
   const view = render(<Greeting name='Ada' />);
@@ -13,9 +13,7 @@ test('rerender updates component props in place', () => {
     screen.getByRole('heading', { level: 3 }).textContent,
     'Hello Ada'
   );
-
   view.rerender(<Greeting name='Grace' />);
-
   assert.strictEqual(
     screen.getByRole('heading', { level: 3 }).textContent,
     'Hello Grace'

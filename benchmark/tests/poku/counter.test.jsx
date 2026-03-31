@@ -1,24 +1,16 @@
 import { afterEach, assert, test } from 'poku';
-import { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '../src/index.ts';
+import { cleanup, fireEvent, render, screen } from 'poku-react-testing';
+import React, { useState } from 'react';
 
 afterEach(cleanup);
 
-type CounterProps = {
-  initialCount?: number;
-};
-
-const Counter = ({ initialCount = 0 }: CounterProps) => {
+const Counter = ({ initialCount = 0 }) => {
   const [count, setCount] = useState(initialCount);
-
-  function increment() {
-    setCount((value) => value + 1);
-  }
 
   return (
     <section>
       <h1>Count: {count}</h1>
-      <button type='button' onClick={increment}>
+      <button type='button' onClick={() => setCount((v) => v + 1)}>
         Increment
       </button>
     </section>
@@ -32,8 +24,6 @@ test('renders and updates a React component', () => {
     screen.getByRole('heading', { name: 'Count: 1' }).textContent,
     'Count: 1'
   );
-
   fireEvent.click(screen.getByRole('button', { name: 'Increment' }));
-
   assert.strictEqual(screen.getByRole('heading').textContent, 'Count: 2');
 });

@@ -1,10 +1,10 @@
 import { afterEach, assert, test } from 'poku';
-import { Suspense, use, useState, useTransition } from 'react';
-import { cleanup, fireEvent, render, screen } from '../src/index.ts';
+import { cleanup, fireEvent, render, screen } from 'poku-react-testing';
+import React, { Suspense, use, useState, useTransition } from 'react';
 
 afterEach(cleanup);
 
-const ResourceView = ({ resource }: { resource: Promise<string> }) => {
+const ResourceView = ({ resource }) => {
   const value = use(resource);
   return <h2>{value}</h2>;
 };
@@ -12,11 +12,11 @@ const ResourceView = ({ resource }: { resource: Promise<string> }) => {
 test('renders a resolved use() resource under Suspense', () => {
   const value = 'Loaded from use() resource';
   const resolvedResource = {
-    status: 'fulfilled' as const,
+    status: 'fulfilled',
     value,
-    then: (onFulfilled?: (resolved: string) => unknown) =>
+    then: (onFulfilled) =>
       Promise.resolve(onFulfilled ? onFulfilled(value) : value),
-  } as unknown as Promise<string>;
+  };
 
   render(
     <Suspense fallback={<div role='status'>Resource pending...</div>}>

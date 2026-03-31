@@ -1,23 +1,19 @@
-import { afterEach, assert, test } from 'poku';
+import { cleanup, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
-import { cleanup, render, screen } from '../src/index.ts';
+import { afterEach, expect, test } from 'vitest';
 
 afterEach(cleanup);
 
-const Greeting = ({ name }: { name: string }) => <h3>Hello {name}</h3>;
+const Greeting = ({ name }) => <h3>Hello {name}</h3>;
 
 test('rerender updates component props in place', () => {
   const view = render(<Greeting name='Ada' />);
 
-  assert.strictEqual(
-    screen.getByRole('heading', { level: 3 }).textContent,
+  expect(screen.getByRole('heading', { level: 3 }).textContent).toBe(
     'Hello Ada'
   );
-
   view.rerender(<Greeting name='Grace' />);
-
-  assert.strictEqual(
-    screen.getByRole('heading', { level: 3 }).textContent,
+  expect(screen.getByRole('heading', { level: 3 }).textContent).toBe(
     'Hello Grace'
   );
 });
@@ -36,8 +32,8 @@ test('unmount runs effect cleanup logic', () => {
   };
 
   const view = render(<WithEffect />);
-  assert.strictEqual(cleaned, false);
+  expect(cleaned).toBe(false);
 
   view.unmount();
-  assert.strictEqual(cleaned, true);
+  expect(cleaned).toBe(true);
 });

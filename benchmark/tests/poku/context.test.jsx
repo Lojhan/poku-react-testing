@@ -1,6 +1,6 @@
 import { afterEach, assert, test } from 'poku';
-import { createContext, useContext } from 'react';
-import { cleanup, render, screen } from '../src/index.ts';
+import { cleanup, render, screen } from 'poku-react-testing';
+import React, { createContext, useContext } from 'react';
 
 afterEach(cleanup);
 
@@ -12,7 +12,7 @@ const ThemeLabel = () => {
 };
 
 test('injects context values via wrapper', () => {
-  const ThemeWrapper = ({ children }: { children?: React.ReactNode }) => (
+  const ThemeWrapper = ({ children }) => (
     <ThemeContext.Provider value='dark'>{children}</ThemeContext.Provider>
   );
 
