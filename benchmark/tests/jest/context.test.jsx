@@ -1,6 +1,6 @@
-import { afterEach, assert, test } from 'poku';
+import { afterEach, expect, test } from '@jest/globals';
+import { cleanup, render, screen } from '@testing-library/react';
 import { createContext, useContext } from 'react';
-import { cleanup, render, screen } from '../src/index.ts';
 
 afterEach(cleanup);
 
@@ -12,14 +12,11 @@ const ThemeLabel = () => {
 };
 
 test('injects context values via wrapper', () => {
-  const ThemeWrapper = ({ children }: { children?: React.ReactNode }) => (
+  const ThemeWrapper = ({ children }) => (
     <ThemeContext.Provider value='dark'>{children}</ThemeContext.Provider>
   );
 
   render(<ThemeLabel />, { wrapper: ThemeWrapper });
 
-  assert.strictEqual(
-    screen.getByText('Theme: dark').textContent,
-    'Theme: dark'
-  );
+  expect(screen.getByText('Theme: dark').textContent).toBe('Theme: dark');
 });

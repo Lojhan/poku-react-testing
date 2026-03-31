@@ -1,10 +1,10 @@
-import { afterEach, assert, test } from 'poku';
+import { afterEach, expect, test } from '@jest/globals';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Suspense, use, useState, useTransition } from 'react';
-import { cleanup, fireEvent, render, screen } from '../src/index.ts';
 
 afterEach(cleanup);
 
-const ResourceView = ({ resource }: { resource: Promise<string> }) => {
+const ResourceView = ({ resource }) => {
   const value = use(resource);
   return <h2>{value}</h2>;
 };
@@ -12,11 +12,11 @@ const ResourceView = ({ resource }: { resource: Promise<string> }) => {
 test('renders a resolved use() resource under Suspense', () => {
   const value = 'Loaded from use() resource';
   const resolvedResource = {
-    status: 'fulfilled' as const,
+    status: 'fulfilled',
     value,
-    then: (onFulfilled?: (resolved: string) => unknown) =>
+    then: (onFulfilled) =>
       Promise.resolve(onFulfilled ? onFulfilled(value) : value),
-  } as unknown as Promise<string>;
+  };
 
   render(
     <Suspense fallback={<div role='status'>Resource pending...</div>}>
@@ -24,13 +24,10 @@ test('renders a resolved use() resource under Suspense', () => {
     </Suspense>
   );
 
-  assert.strictEqual(
-    screen.getByRole('heading', { level: 2 }).textContent,
-    value
-  );
+  expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(value);
 });
 
-await test('runs urgent and transition update pipeline', async () => {
+test('runs urgent and transition update pipeline', () => {
   const TransitionPipeline = () => {
     const [urgentState, setUrgentState] = useState('idle');
     const [deferredState, setDeferredState] = useState('idle');
@@ -60,20 +57,15 @@ await test('runs urgent and transition update pipeline', async () => {
 
   render(<TransitionPipeline />);
 
-  assert.strictEqual(screen.getByLabelText('urgent-state').textContent, 'idle');
-  assert.strictEqual(
-    screen.getByLabelText('deferred-state').textContent,
-    'idle'
-  );
+  expect(screen.getByLabelText('urgent-state').textContent).toBe('idle');
+  expect(screen.getByLabelText('deferred-state').textContent).toBe('idle');
 
   fireEvent.click(screen.getByRole('button', { name: 'Run pipeline' }));
 
-  assert.strictEqual(
-    screen.getByLabelText('urgent-state').textContent,
+  expect(screen.getByLabelText('urgent-state').textContent).toBe(
     'urgent-updated'
   );
-  assert.strictEqual(
-    screen.getByLabelText('deferred-state').textContent,
+  expect(screen.getByLabelText('deferred-state').textContent).toBe(
     'transition-updated'
   );
 });

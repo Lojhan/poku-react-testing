@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-03-31T21:00:50.386Z",
+  "system": {
+    "nodeVersion": "v22.5.1",
+    "platform": "darwin 25.4.0",
+    "cpuModel": "Apple M3 Pro",
+    "cpuCount": 12,
+    "totalMemGb": "18.0"
+  },
+  "config": {
+    "runs": 7,
+    "trim": 1
+  },
+  "results": [
+    {
+      "label": "poku + happy-dom",
+      "mean": 1073.1924668,
+      "min": 995.5031250000002,
+      "max": 1229.6369170000003,
+      "stddev": 84.66710558647982,
+      "meanRss": 171232460.8,
+      "meanUserCpu": 4396,
+      "meanSysCpu": 1584,
+      "runs": 7,
+      "validRuns": 7,
+      "failures": 0
+    },
+    {
+      "label": "poku + jsdom",
+      "mean": 1060.1384749999997,
+      "min": 1007.1474579999995,
+      "max": 1176.5342500000006,
+      "stddev": 60.012456221527664,
+      "meanRss": 171294720,
+      "meanUserCpu": 3228,
+      "meanSysCpu": 1440,
+      "runs": 7,
+      "validRuns": 7,
+      "failures": 0
+    },
+    {
+      "label": "jest + jsdom",
+      "mean": 858.7310334000001,
+      "min": 778.734042,
+      "max": 929.1150420000013,
+      "stddev": 50.38267849622563,
+      "meanRss": 216186880,
+      "meanUserCpu": 778,
+      "meanSysCpu": 176,
+      "runs": 7,
+      "validRuns": 7,
+      "failures": 0
+    },
+    {
+      "label": "vitest + jsdom",
+      "mean": 964.3196584000004,
+      "min": 949.5501660000009,
+      "max": 986.9945420000004,
+      "stddev": 16.60550682561403,
+      "meanRss": 155179417.6,
+      "meanUserCpu": 3336,
+      "meanSysCpu": 1102,
+      "runs": 7,
+      "validRuns": 7,
+      "failures": 0
+    },
+    {
+      "label": "vitest + happy-dom",
+      "mean": 837.8697498000001,
+      "min": 812.1916249999995,
+      "max": 864.1250409999993,
+      "stddev": 20.924101623413893,
+      "meanRss": 121916620.8,
+      "meanUserCpu": 2942,
+      "meanSysCpu": 1006,
+      "runs": 7,
+      "validRuns": 7,
+      "failures": 0
+    }
+  ]
+}

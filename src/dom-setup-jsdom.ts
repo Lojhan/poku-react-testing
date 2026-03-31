@@ -1,5 +1,6 @@
-const defaultUrl = 'http://localhost:3000/';
-const configuredUrl = process.env.POKU_REACT_DOM_URL || defaultUrl;
+import { parseRuntimeOptions } from './runtime-options.ts';
+
+const configuredUrl = parseRuntimeOptions().domUrl;
 
 type ReactActGlobal = typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -22,7 +23,7 @@ const createJSDOMEnvironment = async () => {
     mod = await import('jsdom');
   } catch {
     throw new Error(
-      '[poku-react-testing] DOM adapter "jsdom" requires the "jsdom" package. Install it with "npm install --save-dev jsdom".',
+      '[poku-react-testing] DOM adapter "jsdom" requires the "jsdom" package. Install it with "npm install --save-dev jsdom".'
     );
   }
 

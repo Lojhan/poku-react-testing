@@ -115,11 +115,11 @@ test('renders a heading', () => {
 
 ### Runtime × DOM Adapter
 
-| | Node.js ≥ 20 | Bun ≥ 1 | Deno ≥ 2 |
-|---|:---:|:---:|:---:|
-| **happy-dom** | ✅ | ✅ | ✅ |
-| **jsdom** | ✅ | ✅ | ⚠️ |
-| **custom setup** | ✅ | ✅ | ✅ |
+|                  | Node.js ≥ 20 | Bun ≥ 1 | Deno ≥ 2 |
+| ---------------- | :----------: | :-----: | :------: |
+| **happy-dom**    |      ✅      |   ✅    |    ✅    |
+| **jsdom**        |      ✅      |   ✅    |    ⚠️    |
+| **custom setup** |      ✅      |   ✅    |    ✅    |
 
 > [!NOTE]
 >

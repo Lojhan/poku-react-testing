@@ -1,23 +1,6 @@
 import { assert, test } from 'poku';
 import { __internal } from '../src/plugin.ts';
 
-const ORIGINAL_DOM_URL = process.env.POKU_REACT_DOM_URL;
-const ORIGINAL_METRICS = process.env.POKU_REACT_ENABLE_METRICS;
-
-const restoreEnvBaseline = () => {
-  if (typeof ORIGINAL_DOM_URL === 'undefined') {
-    delete process.env.POKU_REACT_DOM_URL;
-  } else {
-    process.env.POKU_REACT_DOM_URL = ORIGINAL_DOM_URL;
-  }
-
-  if (typeof ORIGINAL_METRICS === 'undefined') {
-    delete process.env.POKU_REACT_ENABLE_METRICS;
-  } else {
-    process.env.POKU_REACT_ENABLE_METRICS = ORIGINAL_METRICS;
-  }
-};
-
 test('normalizes metrics defaults when disabled', () => {
   const normalized = __internal.normalizeMetricsOptions(undefined);
 
@@ -50,6 +33,7 @@ test('buildRunnerCommand injects tsx and dom setup for node', () => {
     command: ['node', '--trace-warnings', 'tests/example.test.tsx'],
     file: 'tests/example.test.tsx',
     domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: ['--poku-react-dom-url=http://example.local/'],
   });
 
   assert.strictEqual(result.shouldHandle, true);
@@ -59,6 +43,7 @@ test('buildRunnerCommand injects tsx and dom setup for node', () => {
     '--import=tsx',
     '--import=/tmp/dom-setup.ts',
     'tests/example.test.tsx',
+    '--poku-react-dom-url=http://example.local/',
   ]);
 });
 
@@ -68,6 +53,7 @@ test('buildRunnerCommand injects dom setup for bun without tsx import', () => {
     command: ['bun', 'tests/example.test.tsx'],
     file: 'tests/example.test.tsx',
     domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: ['--poku-react-metrics=1'],
   });
 
   assert.strictEqual(result.shouldHandle, true);
@@ -75,6 +61,7 @@ test('buildRunnerCommand injects dom setup for bun without tsx import', () => {
     'bun',
     '--import=/tmp/dom-setup.ts',
     'tests/example.test.tsx',
+    '--poku-react-metrics=1',
   ]);
 });
 
@@ -84,6 +71,7 @@ test('buildRunnerCommand injects preload for deno', () => {
     command: ['deno', 'run', '-A', 'tests/example.test.tsx'],
     file: 'tests/example.test.tsx',
     domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: ['--poku-react-min-metric-ms=1.5'],
   });
 
   assert.strictEqual(result.shouldHandle, true);
@@ -93,6 +81,7 @@ test('buildRunnerCommand injects preload for deno', () => {
     '-A',
     '--preload=/tmp/dom-setup.ts',
     'tests/example.test.tsx',
+    '--poku-react-min-metric-ms=1.5',
   ]);
 });
 
@@ -103,6 +92,7 @@ test('buildRunnerCommand leaves unsupported runtime unchanged', () => {
     command: original,
     file: 'tests/example.test.tsx',
     domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: [],
   });
 
   assert.strictEqual(result.shouldHandle, false);
@@ -116,28 +106,59 @@ test('buildRunnerCommand leaves non-react extension unchanged', () => {
     command: original,
     file: 'tests/example.test.ts',
     domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: [],
   });
 
   assert.strictEqual(result.shouldHandle, false);
   assert.deepStrictEqual(result.command, original);
 });
 
-test('environment helpers apply and restore options', () => {
-  restoreEnvBaseline();
+test('buildRunnerCommand avoids duplicate runtime args', () => {
+  const result = __internal.buildRunnerCommand({
+    runtime: 'node',
+    command: [
+      'node',
+      '--trace-warnings',
+      'tests/example.test.tsx',
+      '--poku-react-metrics=1',
+    ],
+    file: 'tests/example.test.tsx',
+    domSetupPath: '/tmp/dom-setup.ts',
+    runtimeOptionArgs: ['--poku-react-metrics=1'],
+  });
 
-  const snapshot = __internal.captureEnvSnapshot();
-  __internal.applyEnvironmentOptions(
+  assert.deepStrictEqual(result.command, [
+    'node',
+    '--trace-warnings',
+    '--import=tsx',
+    '--import=/tmp/dom-setup.ts',
+    'tests/example.test.tsx',
+    '--poku-react-metrics=1',
+  ]);
+});
+
+test('buildRuntimeOptionArgs creates argv-safe plugin flags', () => {
+  const args = __internal.buildRuntimeOptionArgs(
     { domUrl: 'http://example.local/', metrics: true },
-    __internal.normalizeMetricsOptions(true),
+    __internal.normalizeMetricsOptions({ enabled: true, minDurationMs: 2.75 })
   );
 
-  assert.strictEqual(process.env.POKU_REACT_DOM_URL, 'http://example.local/');
-  assert.strictEqual(process.env.POKU_REACT_ENABLE_METRICS, '1');
+  assert.deepStrictEqual(args, [
+    '--poku-react-dom-url=http://example.local/',
+    '--poku-react-metrics=1',
+    '--poku-react-min-metric-ms=2.75',
+  ]);
+});
 
-  __internal.restoreEnvironmentOptions(snapshot);
+test('normalizeMetricsOptions ignores invalid non-number containers', () => {
+  const normalized = __internal.normalizeMetricsOptions({
+    enabled: true,
+    topN: [42] as unknown as number,
+    minDurationMs: ['4'] as unknown as number,
+  });
 
-  assert.strictEqual(process.env.POKU_REACT_DOM_URL, ORIGINAL_DOM_URL);
-  assert.strictEqual(process.env.POKU_REACT_ENABLE_METRICS, ORIGINAL_METRICS);
+  assert.strictEqual(normalized.topN, 5);
+  assert.strictEqual(normalized.minDurationMs, 0);
 });
 
 test('createMetricsSummary returns ordered top metrics with filters', () => {
@@ -149,7 +170,11 @@ test('createMetricsSummary returns ordered top metrics with filters', () => {
 
   const summary = __internal.createMetricsSummary(
     metrics,
-    __internal.normalizeMetricsOptions({ enabled: true, topN: 2, minDurationMs: 1 }),
+    __internal.normalizeMetricsOptions({
+      enabled: true,
+      topN: 2,
+      minDurationMs: 1,
+    })
   );
 
   assert.ok(summary);
@@ -157,14 +182,14 @@ test('createMetricsSummary returns ordered top metrics with filters', () => {
   assert.strictEqual(summary?.totalReported, 2);
   assert.deepStrictEqual(
     summary?.topSlowest.map((item) => item.componentName),
-    ['B', 'C'],
+    ['B', 'C']
   );
 });
 
 test('createMetricsSummary returns null when disabled', () => {
   const summary = __internal.createMetricsSummary(
     [{ file: 'a', componentName: 'A', durationMs: 8 }],
-    __internal.normalizeMetricsOptions(false),
+    __internal.normalizeMetricsOptions(false)
   );
 
   assert.strictEqual(summary, null);
@@ -177,15 +202,41 @@ test('getComponentName falls back for non-string values', () => {
 });
 
 test('isRenderMetricMessage validates expected payloads', () => {
-  assert.strictEqual(__internal.isRenderMetricMessage({ type: 'POKU_REACT_RENDER_METRIC' }), true);
-  assert.strictEqual(__internal.isRenderMetricMessage({ type: 'OTHER' }), false);
+  assert.strictEqual(
+    __internal.isRenderMetricMessage({ type: 'POKU_REACT_RENDER_METRIC' }),
+    true
+  );
+  assert.strictEqual(
+    __internal.isRenderMetricMessage({ type: 'OTHER' }),
+    false
+  );
   assert.strictEqual(__internal.isRenderMetricMessage(null), false);
+});
+
+test('isRenderMetricBatchMessage validates batched payloads', () => {
+  assert.strictEqual(
+    __internal.isRenderMetricBatchMessage({
+      type: 'POKU_REACT_RENDER_METRIC_BATCH',
+      metrics: [{ componentName: 'A', durationMs: 1.2 }],
+    }),
+    true
+  );
+
+  assert.strictEqual(
+    __internal.isRenderMetricBatchMessage({
+      type: 'POKU_REACT_RENDER_METRIC_BATCH',
+    }),
+    false
+  );
+  assert.strictEqual(__internal.isRenderMetricBatchMessage(null), false);
 });
 
 test('resolveDomSetupPath resolves built-in and custom adapters', () => {
   const happyPath = __internal.resolveDomSetupPath('happy-dom');
   const jsdomPath = __internal.resolveDomSetupPath('jsdom');
-  const customPath = __internal.resolveDomSetupPath({ setupModule: 'tests/setup/custom.ts' });
+  const customPath = __internal.resolveDomSetupPath({
+    setupModule: 'tests/setup/custom.ts',
+  });
 
   assert.ok(happyPath.includes('dom-setup-happy'));
   assert.ok(jsdomPath.includes('dom-setup-jsdom'));

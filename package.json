@@ -39,6 +39,8 @@
     "clean": "rimraf dist",
     "build": "tsup src/index.ts src/plugin.ts src/react-testing.ts src/dom-setup-happy.ts src/dom-setup-jsdom.ts --format esm --dts --target node20 --sourcemap --clean --tsconfig tsconfig.tsup.json",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "npm run typecheck",
     "check": "npm run typecheck && npm test",
     "prepack": "npm run build"
@@ -88,6 +90,7 @@
     }
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@happy-dom/global-registrator": "^20.8.9",
     "@types/node": "^25.5.0",
     "@types/jsdom": "^28.0.1",
@@ -97,6 +100,7 @@
     "happy-dom": "^20.8.9",
     "jsdom": "^26.1.0",
     "poku": "4.1.0",
+    "prettier": "^3.6.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "rimraf": "^6.0.1",

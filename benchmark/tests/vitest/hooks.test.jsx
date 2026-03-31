@@ -1,12 +1,12 @@
-import { afterEach, assert, test } from 'poku';
-import { useMemo, useState } from 'react';
 import {
   cleanup,
   fireEvent,
   render,
   renderHook,
   screen,
-} from '../src/index.ts';
+} from '@testing-library/react';
+import { useMemo, useState } from 'react';
+import { afterEach, expect, test } from 'vitest';
 
 afterEach(cleanup);
 
@@ -35,24 +35,15 @@ const HookHarness = () => {
 test('tests custom hooks through a component harness', () => {
   render(<HookHarness />);
 
-  assert.strictEqual(
-    screen.getByLabelText('toggle-state').textContent,
-    'disabled'
-  );
+  expect(screen.getByLabelText('toggle-state').textContent).toBe('disabled');
   fireEvent.click(screen.getByRole('button', { name: 'Toggle' }));
-  assert.strictEqual(
-    screen.getByLabelText('toggle-state').textContent,
-    'enabled'
-  );
+  expect(screen.getByLabelText('toggle-state').textContent).toBe('enabled');
 });
 
 test('tests hook logic directly with renderHook', () => {
-  const { result } = renderHook(
-    ({ initial }: { initial: boolean }) => useToggle(initial),
-    {
-      initialProps: { initial: true },
-    }
-  );
+  const { result } = renderHook(({ initial }) => useToggle(initial), {
+    initialProps: { initial: true },
+  });
 
-  assert.strictEqual(result.current.enabled, true);
+  expect(result.current.enabled).toBe(true);
 });
