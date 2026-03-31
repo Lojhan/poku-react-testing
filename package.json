@@ -1,0 +1,99 @@
+{
+  "name": "poku-react-testing",
+  "version": "0.1.0",
+  "private": false,
+  "description": "React testing helpers and Poku plugin for DOM-backed component tests.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js"
+    },
+    "./react-testing": {
+      "types": "./dist/react-testing.d.ts",
+      "import": "./dist/react-testing.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.x.x",
+    "bun": ">=1.x.x",
+    "deno": ">=2.x.x",
+    "typescript": ">=6.x.x"
+  },
+  "scripts": {
+    "test": "npm run test:happy && npm run test:jsdom",
+    "test:happy": "cross-env POKU_REACT_TEST_DOM=happy-dom node --import=tsx ./node_modules/poku/lib/bin/index.js --showLogs",
+    "test:jsdom": "cross-env POKU_REACT_TEST_DOM=jsdom node --import=tsx ./node_modules/poku/lib/bin/index.js --showLogs",
+    "test:bun": "cross-env POKU_REACT_TEST_DOM=happy-dom bun ./node_modules/poku/lib/bin/index.js --showLogs && cross-env POKU_REACT_TEST_DOM=jsdom bun ./node_modules/poku/lib/bin/index.js --showLogs",
+    "test:deno": "cross-env POKU_REACT_TEST_DOM=happy-dom deno run -A npm:poku --showLogs && cross-env POKU_REACT_TEST_DOM=jsdom deno run -A npm:poku --showLogs",
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts src/plugin.ts src/react-testing.ts src/dom-setup-happy.ts src/dom-setup-jsdom.ts --format esm --dts --target node20 --sourcemap --clean --tsconfig tsconfig.tsup.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "lint": "npm run typecheck",
+    "check": "npm run typecheck && npm test",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "poku",
+    "react",
+    "testing",
+    "testing-library",
+    "happy-dom",
+    "jsdom"
+  ],
+  "author": "",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1"
+  },
+  "peerDependencies": {
+    "@happy-dom/global-registrator": ">=20",
+    "happy-dom": ">=20",
+    "jsdom": ">=22",
+    "poku": ">=4.1.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@happy-dom/global-registrator": {
+      "optional": true
+    },
+    "happy-dom": {
+      "optional": true
+    },
+    "jsdom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.8.9",
+    "@types/node": "^25.5.0",
+    "@types/jsdom": "^28.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "cross-env": "^10.1.0",
+    "happy-dom": "^20.8.9",
+    "jsdom": "^26.1.0",
+    "poku": "4.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
