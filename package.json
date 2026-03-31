@@ -51,7 +51,15 @@
     "happy-dom",
     "jsdom"
   ],
-  "author": "",
+  "author": "Lojhan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lojhan/poku-react-testing"
+  },
+  "homepage": "https://github.com/Lojhan/poku-react-testing#readme",
+  "bugs": {
+    "url": "https://github.com/Lojhan/poku-react-testing/issues"
+  },
   "license": "MIT",
   "publishConfig": {
     "access": "public",
