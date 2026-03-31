@@ -1,6 +1,6 @@
 {
   "name": "poku-react-testing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "React testing helpers and Poku plugin for DOM-backed component tests.",
   "type": "module",
