@@ -123,7 +123,7 @@ test('renders a heading', () => {
 
 > [!NOTE]
 >
-> `jsdom` under Deno may be unstable depending on Deno's npm compatibility layer for the current `jsdom` version. Use `happy-dom` for Deno environments.
+> `jsdom` under Deno may be unstable depending on Deno's npm compatibility layer for the current `jsdom` version. For Deno projects, prefer `happy-dom`.
 
 ---
 
