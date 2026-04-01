@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Lojhan/poku-react-testing/compare/v1.1.0...v1.2.0) (2026-04-01)
+
+
+### Features
+
+* refactor plugin internals and stabilize isolation:none ([#8](https://github.com/Lojhan/poku-react-testing/issues/8)) ([cd2d93d](https://github.com/Lojhan/poku-react-testing/commit/cd2d93d41f913c0a581663a8f9e261c2c6574f27))
+
 ## [1.1.0](https://github.com/Lojhan/poku-react-testing/compare/v1.0.1...v1.1.0) (2026-03-31)
 
 ### Features
