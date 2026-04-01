@@ -46,7 +46,7 @@ test('tests custom hooks through a component harness', () => {
   );
 });
 
-test('tests hook logic directly with renderHook', () => {
+test('tests hook logic directly with renderHook', async () => {
   const { result } = renderHook(
     ({ initial }: { initial: boolean }) => useToggle(initial),
     {

@@ -2,17 +2,15 @@
 
 ## [1.1.0](https://github.com/Lojhan/poku-react-testing/compare/v1.0.1...v1.1.0) (2026-03-31)
 
-
 ### Features
 
-* optimize react testing runtime and add prettier ([#6](https://github.com/Lojhan/poku-react-testing/issues/6)) ([424194b](https://github.com/Lojhan/poku-react-testing/commit/424194b2c5bdc5f8c3d3c7a41bc91b50d51dd38c))
+- optimize react testing runtime and add prettier ([#6](https://github.com/Lojhan/poku-react-testing/issues/6)) ([424194b](https://github.com/Lojhan/poku-react-testing/commit/424194b2c5bdc5f8c3d3c7a41bc91b50d51dd38c))
 
 ## [1.0.1](https://github.com/Lojhan/poku-react-testing/compare/v1.0.0...v1.0.1) (2026-03-31)
 
-
 ### Bug Fixes
 
-* add repository metadata required for npm provenance ([#4](https://github.com/Lojhan/poku-react-testing/issues/4)) ([f20b16a](https://github.com/Lojhan/poku-react-testing/commit/f20b16a9ab72bb957743c7739a926d0bfb851f68))
+- add repository metadata required for npm provenance ([#4](https://github.com/Lojhan/poku-react-testing/issues/4)) ([f20b16a](https://github.com/Lojhan/poku-react-testing/commit/f20b16a9ab72bb957743c7739a926d0bfb851f68))
 
 ## 1.0.0 (2026-03-31)
 

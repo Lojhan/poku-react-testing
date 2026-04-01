@@ -25,7 +25,7 @@ const Counter = ({ initialCount = 0 }: CounterProps) => {
   );
 };
 
-test('renders and updates a React component', () => {
+test('renders and updates a React component', async () => {
   render(<Counter initialCount={1} />);
 
   assert.strictEqual(

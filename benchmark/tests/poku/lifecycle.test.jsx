@@ -6,7 +6,7 @@ afterEach(cleanup);
 
 const Greeting = ({ name }) => <h3>Hello {name}</h3>;
 
-test('rerender updates component props in place', () => {
+test('rerender updates component props in place', async () => {
   const view = render(<Greeting name='Ada' />);
 
   assert.strictEqual(
@@ -20,7 +20,7 @@ test('rerender updates component props in place', () => {
   );
 });
 
-test('unmount runs effect cleanup logic', () => {
+test('unmount runs effect cleanup logic', async () => {
   let cleaned = false;
 
   const WithEffect = () => {

@@ -32,7 +32,7 @@ const HookHarness = () => {
   );
 };
 
-test('tests custom hooks through a component harness', () => {
+test('tests custom hooks through a component harness', async () => {
   render(<HookHarness />);
 
   assert.strictEqual(
@@ -46,7 +46,7 @@ test('tests custom hooks through a component harness', () => {
   );
 });
 
-test('tests hook logic directly with renderHook', () => {
+test('tests hook logic directly with renderHook', async () => {
   const { result } = renderHook(({ initial }) => useToggle(initial), {
     initialProps: { initial: true },
   });

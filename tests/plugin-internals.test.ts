@@ -1,7 +1,7 @@
 import { assert, test } from 'poku';
 import { __internal } from '../src/plugin.ts';
 
-test('normalizes metrics defaults when disabled', () => {
+test('normalizes metrics defaults when disabled', async () => {
   const normalized = __internal.normalizeMetricsOptions(undefined);
 
   assert.strictEqual(normalized.enabled, false);
@@ -9,7 +9,7 @@ test('normalizes metrics defaults when disabled', () => {
   assert.strictEqual(normalized.minDurationMs, 0);
 });
 
-test('normalizes metrics with option object', () => {
+test('normalizes metrics with option object', async () => {
   const reporterCalls: number[] = [];
   const normalized = __internal.normalizeMetricsOptions({
     enabled: true,
@@ -27,7 +27,7 @@ test('normalizes metrics with option object', () => {
   assert.strictEqual(reporterCalls.length, 0);
 });
 
-test('buildRunnerCommand injects tsx and dom setup for node', () => {
+test('buildRunnerCommand injects tsx and dom setup for node', async () => {
   const result = __internal.buildRunnerCommand({
     runtime: 'node',
     command: ['node', '--trace-warnings', 'tests/example.test.tsx'],
@@ -47,7 +47,7 @@ test('buildRunnerCommand injects tsx and dom setup for node', () => {
   ]);
 });
 
-test('buildRunnerCommand injects dom setup for bun without tsx import', () => {
+test('buildRunnerCommand injects dom setup for bun without tsx import', async () => {
   const result = __internal.buildRunnerCommand({
     runtime: 'bun',
     command: ['bun', 'tests/example.test.tsx'],
@@ -65,7 +65,7 @@ test('buildRunnerCommand injects dom setup for bun without tsx import', () => {
   ]);
 });
 
-test('buildRunnerCommand injects preload for deno', () => {
+test('buildRunnerCommand injects preload for deno', async () => {
   const result = __internal.buildRunnerCommand({
     runtime: 'deno',
     command: ['deno', 'run', '-A', 'tests/example.test.tsx'],
@@ -85,7 +85,7 @@ test('buildRunnerCommand injects preload for deno', () => {
   ]);
 });
 
-test('buildRunnerCommand leaves unsupported runtime unchanged', () => {
+test('buildRunnerCommand leaves unsupported runtime unchanged', async () => {
   const original = ['python', 'tests/example.test.tsx'];
   const result = __internal.buildRunnerCommand({
     runtime: 'python',
@@ -99,7 +99,7 @@ test('buildRunnerCommand leaves unsupported runtime unchanged', () => {
   assert.deepStrictEqual(result.command, original);
 });
 
-test('buildRunnerCommand leaves non-react extension unchanged', () => {
+test('buildRunnerCommand leaves non-react extension unchanged', async () => {
   const original = ['node', 'tests/example.test.ts'];
   const result = __internal.buildRunnerCommand({
     runtime: 'node',
@@ -113,7 +113,7 @@ test('buildRunnerCommand leaves non-react extension unchanged', () => {
   assert.deepStrictEqual(result.command, original);
 });
 
-test('buildRunnerCommand avoids duplicate runtime args', () => {
+test('buildRunnerCommand avoids duplicate runtime args', async () => {
   const result = __internal.buildRunnerCommand({
     runtime: 'node',
     command: [
@@ -137,7 +137,7 @@ test('buildRunnerCommand avoids duplicate runtime args', () => {
   ]);
 });
 
-test('buildRuntimeOptionArgs creates argv-safe plugin flags', () => {
+test('buildRuntimeOptionArgs creates argv-safe plugin flags', async () => {
   const args = __internal.buildRuntimeOptionArgs(
     { domUrl: 'http://example.local/', metrics: true },
     __internal.normalizeMetricsOptions({ enabled: true, minDurationMs: 2.75 })
@@ -150,7 +150,7 @@ test('buildRuntimeOptionArgs creates argv-safe plugin flags', () => {
   ]);
 });
 
-test('normalizeMetricsOptions ignores invalid non-number containers', () => {
+test('normalizeMetricsOptions ignores invalid non-number containers', async () => {
   const normalized = __internal.normalizeMetricsOptions({
     enabled: true,
     topN: [42] as unknown as number,
@@ -161,7 +161,7 @@ test('normalizeMetricsOptions ignores invalid non-number containers', () => {
   assert.strictEqual(normalized.minDurationMs, 0);
 });
 
-test('createMetricsSummary returns ordered top metrics with filters', () => {
+test('createMetricsSummary returns ordered top metrics with filters', async () => {
   const metrics = [
     { file: 'a', componentName: 'A', durationMs: 0.4 },
     { file: 'b', componentName: 'B', durationMs: 4.2 },
@@ -186,7 +186,7 @@ test('createMetricsSummary returns ordered top metrics with filters', () => {
   );
 });
 
-test('createMetricsSummary returns null when disabled', () => {
+test('createMetricsSummary returns null when disabled', async () => {
   const summary = __internal.createMetricsSummary(
     [{ file: 'a', componentName: 'A', durationMs: 8 }],
     __internal.normalizeMetricsOptions(false)
@@ -195,13 +195,13 @@ test('createMetricsSummary returns null when disabled', () => {
   assert.strictEqual(summary, null);
 });
 
-test('getComponentName falls back for non-string values', () => {
+test('getComponentName falls back for non-string values', async () => {
   assert.strictEqual(__internal.getComponentName('MyComp'), 'MyComp');
   assert.strictEqual(__internal.getComponentName(''), 'AnonymousComponent');
   assert.strictEqual(__internal.getComponentName(null), 'AnonymousComponent');
 });
 
-test('isRenderMetricMessage validates expected payloads', () => {
+test('isRenderMetricMessage validates expected payloads', async () => {
   assert.strictEqual(
     __internal.isRenderMetricMessage({ type: 'POKU_REACT_RENDER_METRIC' }),
     true
@@ -213,7 +213,7 @@ test('isRenderMetricMessage validates expected payloads', () => {
   assert.strictEqual(__internal.isRenderMetricMessage(null), false);
 });
 
-test('isRenderMetricBatchMessage validates batched payloads', () => {
+test('isRenderMetricBatchMessage validates batched payloads', async () => {
   assert.strictEqual(
     __internal.isRenderMetricBatchMessage({
       type: 'POKU_REACT_RENDER_METRIC_BATCH',
@@ -231,7 +231,7 @@ test('isRenderMetricBatchMessage validates batched payloads', () => {
   assert.strictEqual(__internal.isRenderMetricBatchMessage(null), false);
 });
 
-test('resolveDomSetupPath resolves built-in and custom adapters', () => {
+test('resolveDomSetupPath resolves built-in and custom adapters', async () => {
   const happyPath = __internal.resolveDomSetupPath('happy-dom');
   const jsdomPath = __internal.resolveDomSetupPath('jsdom');
   const customPath = __internal.resolveDomSetupPath({

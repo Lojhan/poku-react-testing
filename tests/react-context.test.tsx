@@ -11,7 +11,7 @@ const ThemeLabel = () => {
   return <p>Theme: {theme}</p>;
 };
 
-test('injects context values via wrapper', () => {
+test('injects context values via wrapper', async () => {
   const ThemeWrapper = ({ children }: { children?: React.ReactNode }) => (
     <ThemeContext.Provider value='dark'>{children}</ThemeContext.Provider>
   );

@@ -9,7 +9,7 @@ const ResourceView = ({ resource }: { resource: Promise<string> }) => {
   return <h2>{value}</h2>;
 };
 
-test('renders a resolved use() resource under Suspense', () => {
+test('renders a resolved use() resource under Suspense', async () => {
   const value = 'Loaded from use() resource';
   const resolvedResource = {
     status: 'fulfilled' as const,
@@ -30,7 +30,7 @@ test('renders a resolved use() resource under Suspense', () => {
   );
 });
 
-await test('runs urgent and transition update pipeline', async () => {
+test('runs urgent and transition update pipeline', async () => {
   const TransitionPipeline = () => {
     const [urgentState, setUrgentState] = useState('idle');
     const [deferredState, setDeferredState] = useState('idle');

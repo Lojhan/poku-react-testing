@@ -49,22 +49,55 @@ type QueuedRenderMetric = {
   durationMs: number;
 };
 
-const metricBuffer: QueuedRenderMetric[] = [];
-let metricFlushTimer: ReturnType<typeof setTimeout> | undefined;
-let metricsChannelClosed = false;
+type MetricsRuntimeState = {
+  metricBuffer: QueuedRenderMetric[];
+  metricFlushTimer: ReturnType<typeof setTimeout> | undefined;
+  metricsChannelClosed: boolean;
+  listenersRegistered: boolean;
+};
+
+const metricsStateKey = Symbol.for('poku-react-testing.metrics-runtime-state');
+
+type MetricsStateGlobal = typeof globalThis & {
+  [metricsStateKey]?: MetricsRuntimeState;
+};
+
+const getMetricsRuntimeState = (): MetricsRuntimeState => {
+  const stateGlobal = globalThis as MetricsStateGlobal;
+
+  if (!stateGlobal[metricsStateKey]) {
+    stateGlobal[metricsStateKey] = {
+      metricBuffer: [],
+      metricFlushTimer: undefined,
+      metricsChannelClosed: false,
+      listenersRegistered: false,
+    };
+  }
+
+  return stateGlobal[metricsStateKey];
+};
+
+const metricsState = getMetricsRuntimeState();
 
 const flushMetricBuffer = () => {
   if (!metricsEnabled || typeof process.send !== 'function') return;
 
   if (process.connected === false) {
-    metricBuffer.length = 0;
-    metricsChannelClosed = true;
+    metricsState.metricBuffer.length = 0;
+    metricsState.metricsChannelClosed = true;
     return;
   }
 
-  if (metricsChannelClosed || metricBuffer.length === 0) return;
+  if (
+    metricsState.metricsChannelClosed ||
+    metricsState.metricBuffer.length === 0
+  )
+    return;
 
-  const payload = metricBuffer.splice(0, metricBuffer.length);
+  const payload = metricsState.metricBuffer.splice(
+    0,
+    metricsState.metricBuffer.length
+  );
 
   try {
     process.send({
@@ -72,29 +105,31 @@ const flushMetricBuffer = () => {
       metrics: payload,
     });
   } catch {
-    metricsChannelClosed = true;
-    metricBuffer.length = 0;
+    metricsState.metricsChannelClosed = true;
+    metricsState.metricBuffer.length = 0;
   }
 };
 
 const clearMetricFlushTimer = () => {
-  if (!metricFlushTimer) return;
-  clearTimeout(metricFlushTimer);
-  metricFlushTimer = undefined;
+  if (!metricsState.metricFlushTimer) return;
+  clearTimeout(metricsState.metricFlushTimer);
+  metricsState.metricFlushTimer = undefined;
 };
 
 const scheduleMetricFlush = () => {
-  if (metricFlushTimer) return;
+  if (metricsState.metricFlushTimer) return;
 
-  metricFlushTimer = setTimeout(() => {
-    metricFlushTimer = undefined;
+  metricsState.metricFlushTimer = setTimeout(() => {
+    metricsState.metricFlushTimer = undefined;
     flushMetricBuffer();
   }, runtimeOptions.metricFlushMs);
 
-  metricFlushTimer.unref?.();
+  metricsState.metricFlushTimer.unref?.();
 };
 
-if (metricsEnabled) {
+if (metricsEnabled && !metricsState.listenersRegistered) {
+  metricsState.listenersRegistered = true;
+
   process.on('beforeExit', () => {
     clearMetricFlushTimer();
     flushMetricBuffer();
@@ -102,17 +137,17 @@ if (metricsEnabled) {
 
   process.on('disconnect', () => {
     clearMetricFlushTimer();
-    metricBuffer.length = 0;
-    metricsChannelClosed = true;
+    metricsState.metricBuffer.length = 0;
+    metricsState.metricsChannelClosed = true;
   });
 }
 
 const emitRenderMetric = (componentName: string, durationMs: number) => {
   if (!metricsEnabled || typeof process.send !== 'function') return;
 
-  if (process.connected === false || metricsChannelClosed) {
-    metricBuffer.length = 0;
-    metricsChannelClosed = true;
+  if (process.connected === false || metricsState.metricsChannelClosed) {
+    metricsState.metricBuffer.length = 0;
+    metricsState.metricsChannelClosed = true;
     clearMetricFlushTimer();
     return;
   }
@@ -123,12 +158,12 @@ const emitRenderMetric = (componentName: string, durationMs: number) => {
   // Optimization: Drop metrics below the threshold to prevent IPC flooding
   if (safeDuration < minMetricMs) return;
 
-  metricBuffer.push({
+  metricsState.metricBuffer.push({
     componentName,
     durationMs: safeDuration,
   });
 
-  if (metricBuffer.length >= runtimeOptions.metricBatchSize) {
+  if (metricsState.metricBuffer.length >= runtimeOptions.metricBatchSize) {
     clearMetricFlushTimer();
     flushMetricBuffer();
     return;
