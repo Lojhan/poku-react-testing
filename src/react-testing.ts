@@ -88,7 +88,10 @@ const flushMetricBuffer = () => {
     return;
   }
 
-  if (metricsState.metricsChannelClosed || metricsState.metricBuffer.length === 0)
+  if (
+    metricsState.metricsChannelClosed ||
+    metricsState.metricBuffer.length === 0
+  )
     return;
 
   const payload = metricsState.metricBuffer.splice(

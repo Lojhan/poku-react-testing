@@ -1,3 +1,10 @@
+import type {
+  ReactDomAdapter,
+  ReactMetricsOptions,
+  ReactMetricsSummary,
+  ReactTestingPluginOptions,
+  RenderMetric,
+} from './plugin-types.ts';
 import { definePlugin } from 'poku/plugins';
 import {
   buildRunnerCommand,
@@ -15,13 +22,6 @@ import {
   selectTopSlowestMetrics,
 } from './plugin-metrics.ts';
 import { setupInProcessEnvironment } from './plugin-setup.ts';
-import type {
-  ReactDomAdapter,
-  ReactMetricsOptions,
-  ReactMetricsSummary,
-  ReactTestingPluginOptions,
-  RenderMetric,
-} from './plugin-types.ts';
 
 export type {
   ReactDomAdapter,

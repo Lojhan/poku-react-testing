@@ -76,7 +76,9 @@ test('buildRunnerCommand leaves unsupported runtime unchanged', async () => {
 test('resolveDomSetupPath resolves built-in and custom adapters', async () => {
   const happyPath = resolveDomSetupPath('happy-dom');
   const jsdomPath = resolveDomSetupPath('jsdom');
-  const customPath = resolveDomSetupPath({ setupModule: 'tests/setup/custom.ts' });
+  const customPath = resolveDomSetupPath({
+    setupModule: 'tests/setup/custom.ts',
+  });
 
   assert.ok(happyPath.includes('dom-setup-happy'));
   assert.ok(jsdomPath.includes('dom-setup-jsdom'));

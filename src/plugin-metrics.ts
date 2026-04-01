@@ -1,10 +1,10 @@
-import { runtimeOptionArgPrefixes } from './runtime-options.ts';
 import type {
   NormalizedMetricsOptions,
   ReactMetricsSummary,
   ReactTestingPluginOptions,
   RenderMetric,
 } from './plugin-types.ts';
+import { runtimeOptionArgPrefixes } from './runtime-options.ts';
 
 type RenderMetricMessage = {
   type: 'POKU_REACT_RENDER_METRIC';

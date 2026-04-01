@@ -1,7 +1,7 @@
+import type { ReactDomAdapter } from './plugin-types.ts';
 import { existsSync } from 'node:fs';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ReactDomAdapter } from './plugin-types.ts';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
