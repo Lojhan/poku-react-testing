@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * React Testing Framework Benchmark
- * Compares: poku+poku-react-testing vs jest+RTL vs vitest+RTL
+ * Compares: poku+@pokujs/react vs jest+RTL vs vitest+RTL
  *
  * Metrics: wall-clock time, user CPU, sys CPU, peak RSS (macOS /usr/bin/time -l)
  * Strategy: RUNS per scenario, drop 1 slowest + 1 fastest, report trimmed mean.
@@ -35,12 +35,12 @@ const POKU_BIN = join(BENCH, 'node_modules', 'poku', 'lib', 'bin', 'index.js');
 // ─── local build sync ──────────────────────────────────────────────────────
 
 /**
- * Replace the benchmark's poku-react-testing installation with a clean copy
+ * Replace the benchmark's @pokujs/react installation with a clean copy
  * of the local dist/ so that Node resolves react/react-dom from
  * benchmark/node_modules instead of following a symlink to the workspace root.
  */
 function syncLocalBuild() {
-  const dest = join(BENCH, 'node_modules', 'poku-react-testing');
+  const dest = join(BENCH, 'node_modules', '@pokujs', 'react');
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(join(dest, 'dist'), { recursive: true });
   copyFileSync(join(ROOT, 'package.json'), join(dest, 'package.json'));
@@ -267,7 +267,7 @@ if (!existsSync(join(BENCH, 'node_modules', 'poku'))) {
 // ─── sync local build ────────────────────────────────────────────────────────
 
 if (existsSync(join(ROOT, 'dist'))) {
-  process.stdout.write('  Syncing local poku-react-testing build... ');
+  process.stdout.write('  Syncing local @pokujs/react build... ');
   syncLocalBuild();
   process.stdout.write('done\n\n');
 }
@@ -474,8 +474,8 @@ Each scenario runs the **same 9 React tests** across 5 test files:
 
 | Combination | DOM layer | Assertion style |
 |---|---|---|
-| poku + poku-react-testing | happy-dom | \`assert.strictEqual\` |
-| poku + poku-react-testing | jsdom | \`assert.strictEqual\` |
+| poku + @pokujs/react | happy-dom | \`assert.strictEqual\` |
+| poku + @pokujs/react | jsdom | \`assert.strictEqual\` |
 | jest 29 + @testing-library/react | jsdom (jest-environment-jsdom) | \`expect().toBe()\` |
 | vitest 3 + @testing-library/react | jsdom | \`expect().toBe()\` |
 | vitest 3 + @testing-library/react | happy-dom | \`expect().toBe()\` |
@@ -557,7 +557,7 @@ ${results
 
 ### Interpretation
 
-**poku + poku-react-testing** avoids the multi-process or bundler startup that jest (babel transform
+**poku + @pokujs/react** avoids the multi-process or bundler startup that jest (babel transform
 pipeline) and vitest (Vite + module graph) require. Its architecture — isolated per-file Node.js
 processes with minimal bootstrap — means cold-start overhead is proportional to the number of test
 files, not to the framework's own initialization.

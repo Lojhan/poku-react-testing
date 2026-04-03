@@ -1,5 +1,5 @@
 import { afterEach, assert, test } from 'poku';
-import { cleanup, render, screen } from 'poku-react-testing';
+import { cleanup, render, screen } from '@pokujs/react';
 import React, { useEffect } from 'react';
 
 afterEach(cleanup);

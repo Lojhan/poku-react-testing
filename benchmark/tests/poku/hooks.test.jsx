@@ -5,7 +5,7 @@ import {
   render,
   renderHook,
   screen,
-} from 'poku-react-testing';
+} from '@pokujs/react';
 import React, { useMemo, useState } from 'react';
 
 afterEach(cleanup);

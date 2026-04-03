@@ -29,8 +29,8 @@ Each scenario runs the **same 9 React tests** across 5 test files:
 
 | Combination                       | DOM layer                      | Assertion style      |
 | --------------------------------- | ------------------------------ | -------------------- |
-| poku + @pokujs/react         | happy-dom                      | `assert.strictEqual` |
-| poku + @pokujs/react         | jsdom                          | `assert.strictEqual` |
+| poku + @pokujs/react              | happy-dom                      | `assert.strictEqual` |
+| poku + @pokujs/react              | jsdom                          | `assert.strictEqual` |
 | jest 29 + @testing-library/react  | jsdom (jest-environment-jsdom) | `expect().toBe()`    |
 | vitest 3 + @testing-library/react | jsdom                          | `expect().toBe()`    |
 | vitest 3 + @testing-library/react | happy-dom                      | `expect().toBe()`    |
