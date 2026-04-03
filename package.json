@@ -56,7 +56,7 @@
   "author": "Lojhan",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pokujs/react"
+    "url": "git+https://github.com/pokujs/react.git"
   },
   "homepage": "https://github.com/pokujs/react#readme",
   "bugs": {
