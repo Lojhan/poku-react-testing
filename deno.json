@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "@pokujs/dom": "npm:@pokujs/dom@^1.1.0"
+  }
+}
