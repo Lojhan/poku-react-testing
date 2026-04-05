@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const DOM_ROOT = resolve(__dirname, '..', '..', 'dom');
 const BENCH = __dirname;
 
 const RUNS = parseInt(process.env.BENCH_RUNS ?? '7', 10);
@@ -40,12 +41,20 @@ const POKU_BIN = join(BENCH, 'node_modules', 'poku', 'lib', 'bin', 'index.js');
  * benchmark/node_modules instead of following a symlink to the workspace root.
  */
 function syncLocalBuild() {
-  const dest = join(BENCH, 'node_modules', '@pokujs', 'react');
-  rmSync(dest, { recursive: true, force: true });
-  mkdirSync(join(dest, 'dist'), { recursive: true });
-  copyFileSync(join(ROOT, 'package.json'), join(dest, 'package.json'));
+  const reactDest = join(BENCH, 'node_modules', '@pokujs', 'react');
+  rmSync(reactDest, { recursive: true, force: true });
+  mkdirSync(join(reactDest, 'dist'), { recursive: true });
+  copyFileSync(join(ROOT, 'package.json'), join(reactDest, 'package.json'));
   for (const file of readdirSync(join(ROOT, 'dist'))) {
-    copyFileSync(join(ROOT, 'dist', file), join(dest, 'dist', file));
+    copyFileSync(join(ROOT, 'dist', file), join(reactDest, 'dist', file));
+  }
+
+  const domDest = join(BENCH, 'node_modules', '@pokujs', 'dom');
+  rmSync(domDest, { recursive: true, force: true });
+  mkdirSync(join(domDest, 'dist'), { recursive: true });
+  copyFileSync(join(DOM_ROOT, 'package.json'), join(domDest, 'package.json'));
+  for (const file of readdirSync(join(DOM_ROOT, 'dist'))) {
+    copyFileSync(join(DOM_ROOT, 'dist', file), join(domDest, 'dist', file));
   }
 }
 
@@ -111,8 +120,17 @@ function runOnce(args, cwd, extraEnv = {}) {
     }
   }
 
+  const plainStdout = (result.stdout ?? '').replace(/\u001b\[[0-9;]*m/g, '');
+  const reportedDurationMatch = plainStdout.match(
+    /Duration\s+›\s+([\d.]+)ms/
+  );
+  const reportedDurationMs = reportedDurationMatch
+    ? Number(reportedDurationMatch[1])
+    : null;
+
   return {
     elapsed,
+    reportedDurationMs,
     maxRssBytes,
     userCpuMs,
     sysCpuMs,
@@ -125,7 +143,13 @@ function runOnce(args, cwd, extraEnv = {}) {
 
 // ─── scenario runner ────────────────────────────────────────────────────────
 
-function benchmarkScenario(label, args, cwd, extraEnv = {}) {
+function benchmarkScenario(
+  label,
+  args,
+  cwd,
+  extraEnv = {},
+  options = {}
+) {
   process.stdout.write(`  ${pad(label, 36)}`);
 
   const measurements = [];
@@ -159,7 +183,14 @@ function benchmarkScenario(label, args, cwd, extraEnv = {}) {
   measurements.sort((a, b) => a.elapsed - b.elapsed);
   const trimmed = measurements.slice(TRIM, measurements.length - TRIM);
 
-  const times = trimmed.map((m) => m.elapsed);
+  const useReportedDuration = Boolean(options.useReportedDuration);
+  const times = trimmed.map((m) => {
+    if (useReportedDuration && m.reportedDurationMs != null) {
+      return m.reportedDurationMs;
+    }
+
+    return m.elapsed;
+  });
   const rssList = trimmed.map((m) => m.maxRssBytes).filter((v) => v != null);
   const userCpus = trimmed.map((m) => m.userCpuMs).filter((v) => v != null);
   const sysCpus = trimmed.map((m) => m.sysCpuMs).filter((v) => v != null);
@@ -209,12 +240,14 @@ const scenarios = [
     args: ['node', POKU_BIN, 'tests/poku'],
     cwd: BENCH,
     env: { POKU_REACT_TEST_DOM: 'happy-dom' },
+    options: { useReportedDuration: true },
   },
   {
     label: 'poku + jsdom',
     args: ['node', POKU_BIN, 'tests/poku'],
     cwd: BENCH,
     env: { POKU_REACT_TEST_DOM: 'jsdom' },
+    options: { useReportedDuration: true },
   },
   {
     label: 'jest + jsdom',
@@ -266,7 +299,7 @@ if (!existsSync(join(BENCH, 'node_modules', 'poku'))) {
 
 // ─── sync local build ────────────────────────────────────────────────────────
 
-if (existsSync(join(ROOT, 'dist'))) {
+if (existsSync(join(ROOT, 'dist')) && existsSync(join(DOM_ROOT, 'dist'))) {
   process.stdout.write('  Syncing local @pokujs/react build... ');
   syncLocalBuild();
   process.stdout.write('done\n\n');
@@ -297,7 +330,7 @@ console.log('\n  Legend: · = pass  ✗ = fail\n');
 const results = [];
 
 for (const s of scenarios) {
-  const r = benchmarkScenario(s.label, s.args, s.cwd, s.env);
+  const r = benchmarkScenario(s.label, s.args, s.cwd, s.env, s.options);
   if (r) results.push(r);
 }
 
@@ -484,7 +517,8 @@ Each scenario runs the **same 9 React tests** across 5 test files:
 
 ${resultsTable}
 
-> **Wall-clock time** is measured with \`performance.now()\` around the child-process spawn.
+> **Poku elapsed time** uses Poku's reported suite \`Duration\` (ANSI-stripped parse) to avoid teardown-skew artifacts.
+> **Jest/Vitest elapsed time** is measured with \`performance.now()\` around the child-process spawn.
 > **Peak RSS** is captured via \`/usr/bin/time -l\` on macOS (bytes → MB).
 > The baseline for relative comparisons is **poku + happy-dom**.
 

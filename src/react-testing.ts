@@ -9,11 +9,15 @@ import { getQueriesForElement, queries } from '@testing-library/dom';
 import * as domTestingLibrary from '@testing-library/dom';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import {
+  createRenderMetricsEmitter,
+  createScreen,
+  getNow,
+} from '@pokujs/dom';
 import { parseRuntimeOptions } from './runtime-options.ts';
 
 const { act } = React;
 
-/** React `act` re-export for explicit async orchestration in tests. */
 export { act };
 
 type WrapperComponent = ComponentType<PropsWithChildren<unknown>>;
@@ -42,11 +46,6 @@ const unmountMounted = (mounted: InternalMounted) => {
   }
 };
 
-const getNow: () => number =
-  typeof performance !== 'undefined' && typeof performance.now === 'function'
-    ? performance.now.bind(performance)
-    : Date.now.bind(Date);
-
 const getComponentName = (ui: ReactElement) => {
   const uiType = ui.type;
   if (!uiType) return 'AnonymousComponent';
@@ -57,136 +56,11 @@ const getComponentName = (ui: ReactElement) => {
 };
 
 const runtimeOptions = parseRuntimeOptions();
-const metricsEnabled = runtimeOptions.metricsEnabled;
-const minMetricMs = runtimeOptions.minMetricMs;
-
-type QueuedRenderMetric = {
-  componentName: string;
-  durationMs: number;
-};
-
-type MetricsRuntimeState = {
-  metricBuffer: QueuedRenderMetric[];
-  metricFlushTimer: ReturnType<typeof setTimeout> | undefined;
-  metricsChannelClosed: boolean;
-  listenersRegistered: boolean;
-};
-
-const metricsStateKey = Symbol.for('@pokujs/react.metrics-runtime-state');
-
-type MetricsStateGlobal = typeof globalThis & {
-  [metricsStateKey]?: MetricsRuntimeState;
-};
-
-const getMetricsRuntimeState = (): MetricsRuntimeState => {
-  const stateGlobal = globalThis as MetricsStateGlobal;
-
-  if (!stateGlobal[metricsStateKey]) {
-    stateGlobal[metricsStateKey] = {
-      metricBuffer: [],
-      metricFlushTimer: undefined,
-      metricsChannelClosed: false,
-      listenersRegistered: false,
-    };
-  }
-
-  return stateGlobal[metricsStateKey];
-};
-
-const metricsState = getMetricsRuntimeState();
-
-const flushMetricBuffer = () => {
-  if (!metricsEnabled || typeof process.send !== 'function') return;
-
-  if (process.connected === false) {
-    metricsState.metricBuffer.length = 0;
-    metricsState.metricsChannelClosed = true;
-    return;
-  }
-
-  if (
-    metricsState.metricsChannelClosed ||
-    metricsState.metricBuffer.length === 0
-  )
-    return;
-
-  const payload = metricsState.metricBuffer.splice(
-    0,
-    metricsState.metricBuffer.length
-  );
-
-  try {
-    process.send({
-      type: 'POKU_REACT_RENDER_METRIC_BATCH',
-      metrics: payload,
-    });
-  } catch {
-    metricsState.metricsChannelClosed = true;
-    metricsState.metricBuffer.length = 0;
-  }
-};
-
-const clearMetricFlushTimer = () => {
-  if (!metricsState.metricFlushTimer) return;
-  clearTimeout(metricsState.metricFlushTimer);
-  metricsState.metricFlushTimer = undefined;
-};
-
-const scheduleMetricFlush = () => {
-  if (metricsState.metricFlushTimer) return;
-
-  metricsState.metricFlushTimer = setTimeout(() => {
-    metricsState.metricFlushTimer = undefined;
-    flushMetricBuffer();
-  }, runtimeOptions.metricFlushMs);
-
-  metricsState.metricFlushTimer.unref?.();
-};
-
-if (metricsEnabled && !metricsState.listenersRegistered) {
-  metricsState.listenersRegistered = true;
-
-  process.on('beforeExit', () => {
-    clearMetricFlushTimer();
-    flushMetricBuffer();
-  });
-
-  process.on('disconnect', () => {
-    clearMetricFlushTimer();
-    metricsState.metricBuffer.length = 0;
-    metricsState.metricsChannelClosed = true;
-  });
-}
-
-const emitRenderMetric = (componentName: string, durationMs: number) => {
-  if (!metricsEnabled || typeof process.send !== 'function') return;
-
-  if (process.connected === false || metricsState.metricsChannelClosed) {
-    metricsState.metricBuffer.length = 0;
-    metricsState.metricsChannelClosed = true;
-    clearMetricFlushTimer();
-    return;
-  }
-
-  const safeDuration =
-    Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
-
-  // Optimization: Drop metrics below the threshold to prevent IPC flooding
-  if (safeDuration < minMetricMs) return;
-
-  metricsState.metricBuffer.push({
-    componentName,
-    durationMs: safeDuration,
-  });
-
-  if (metricsState.metricBuffer.length >= runtimeOptions.metricBatchSize) {
-    clearMetricFlushTimer();
-    flushMetricBuffer();
-    return;
-  }
-
-  scheduleMetricFlush();
-};
+const metrics = createRenderMetricsEmitter({
+  runtimeOptions,
+  metricsStateKey: Symbol.for('@pokujs/react.metrics-runtime-state'),
+  metricsBatchMessageType: 'POKU_REACT_RENDER_METRIC_BATCH',
+});
 
 const wrapUi = (ui: ReactElement, Wrapper?: WrapperComponent) =>
   Wrapper ? React.createElement(Wrapper, null, ui) : ui;
@@ -205,9 +79,6 @@ export type RenderResult = BoundFunctions<typeof queries> & {
   unmount: () => void;
 };
 
-/**
- * Render a React element in an isolated container and return bound DOM queries.
- */
 export const render = (
   ui: ReactElement,
   options: RenderOptions = {}
@@ -233,7 +104,7 @@ export const render = (
     });
   }
 
-  emitRenderMetric(getComponentName(ui), getNow() - startedAt);
+  metrics.emitRenderMetric(getComponentName(ui), getNow() - startedAt);
 
   const unmount = () => {
     if (!mountedRoots.has(mounted)) return;
@@ -272,9 +143,6 @@ export type RenderHookResult<Result, Props = unknown> = {
   unmount: () => void;
 };
 
-/**
- * Render a hook directly and expose the latest hook value via `result.current`.
- */
 export const renderHook = <
   Result,
   Props extends Record<string, unknown> = Record<string, unknown>,
@@ -303,35 +171,16 @@ export const renderHook = <
   };
 };
 
-/**
- * Unmount all rendered roots and remove owned containers from the document.
- */
 export const cleanup = () => {
   for (const mounted of [...mountedRoots]) {
     unmountMounted(mounted);
   }
 
-  flushMetricBuffer();
+  metrics.flushMetricBuffer();
 };
 
-/**
- * Global Testing Library `screen` bound to `document.body`.
- *
- * Uses a Proxy so newly-added queries from future @testing-library/dom versions
- * are automatically forwarded without needing manual rebinding.
- */
-const baseScreenQueries = getQueriesForElement(document.body);
+export const screen = createScreen() as Screen;
 
-export const screen = new Proxy(baseScreenQueries, {
-  get(target, prop, receiver) {
-    const value = Reflect.get(target, prop, receiver);
-    return typeof value === 'function' ? value.bind(target) : value;
-  },
-}) as Screen;
-
-/**
- * Testing Library `fireEvent` wrapped in React `act` for synchronous state flushing.
- */
 const baseFireEventInstance = domTestingLibrary.fireEvent;
 
 const wrappedFireEvent = ((...args: Parameters<typeof baseFireEvent>) => {
@@ -373,7 +222,4 @@ for (const key of Object.keys(baseFireEventInstance) as Array<
 
 export const fireEvent = wrappedFireEvent;
 
-// Re-export all remaining @testing-library/dom utilities.
-// Note: local named exports above (act, cleanup, fireEvent, render, renderHook,
-// screen) shadow any same-named re-exports from this star export in ESM.
 export * from '@testing-library/dom';
