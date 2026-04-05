@@ -68,7 +68,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@pokujs/dom": "^1.0.1",
+    "@pokujs/dom": "^1.1.0",
     "@testing-library/dom": "^10.4.1"
   },
   "peerDependencies": {
