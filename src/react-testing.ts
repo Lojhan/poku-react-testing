@@ -7,6 +7,7 @@ import type { ComponentType, PropsWithChildren, ReactElement } from 'react';
 import type { Root } from 'react-dom/client';
 import { getQueriesForElement, queries } from '@testing-library/dom';
 import * as domTestingLibrary from '@testing-library/dom';
+import * as pokuDom from '@pokujs/dom';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -29,9 +30,92 @@ type InternalMounted = {
   ownsContainer: boolean;
 };
 
-const mountedRoots = new Set<InternalMounted>();
+const fallbackMountedRoots = new Set<InternalMounted>();
 
-const unmountMounted = (mounted: InternalMounted) => {
+type ScopeSlot<T> = {
+  readonly value: T;
+};
+
+type ScopeLike = {
+  getOrCreateSlot<T>(key: symbol, init: () => T): ScopeSlot<T>;
+  getSlot?<T>(key: symbol): ScopeSlot<T> | undefined;
+  addCleanup?(fn: () => void | Promise<void>): void;
+};
+
+type DomScopeApi = {
+  defineSlotKey?: <T>(name: string) => symbol;
+  getOrCreateScope?: () => ScopeLike | undefined;
+  getCurrentScope?: () => ScopeLike | undefined;
+};
+
+const domScopeApi = pokuDom as unknown as DomScopeApi;
+
+const MOUNTED_ROOTS_SLOT_KEY =
+  typeof domScopeApi.defineSlotKey === 'function'
+    ? domScopeApi.defineSlotKey<Set<InternalMounted>>(
+        '@pokujs/react.mounted-roots'
+      )
+    : undefined;
+
+const CLEANUP_STATE_SLOT_KEY =
+  typeof domScopeApi.defineSlotKey === 'function'
+    ? domScopeApi.defineSlotKey<{ registered: boolean }>(
+        '@pokujs/react.cleanup-registered'
+      )
+    : undefined;
+
+const cleanupMountedRoots = (mountedRoots: Set<InternalMounted>) => {
+  for (const mounted of [...mountedRoots]) {
+    unmountMounted(mountedRoots, mounted);
+  }
+};
+
+const getScopedMountedRoots = (): Set<InternalMounted> | undefined => {
+  if (!MOUNTED_ROOTS_SLOT_KEY) return undefined;
+  if (typeof domScopeApi.getOrCreateScope !== 'function') return undefined;
+
+  const scope = domScopeApi.getOrCreateScope();
+  if (!scope) return undefined;
+
+  const mountedRoots = scope.getOrCreateSlot(MOUNTED_ROOTS_SLOT_KEY, () =>
+    new Set<InternalMounted>()
+  ).value;
+
+  if (!CLEANUP_STATE_SLOT_KEY || typeof scope.addCleanup !== 'function') {
+    return mountedRoots;
+  }
+
+  const cleanupState = scope.getOrCreateSlot(CLEANUP_STATE_SLOT_KEY, () => ({
+    registered: false,
+  })).value;
+
+  if (!cleanupState.registered) {
+    cleanupState.registered = true;
+    scope.addCleanup(() => {
+      cleanupMountedRoots(mountedRoots);
+      metrics.flushMetricBuffer();
+    });
+  }
+
+  return mountedRoots;
+};
+
+const getMountedRoots = (): Set<InternalMounted> =>
+  getScopedMountedRoots() ?? fallbackMountedRoots;
+
+const getCurrentScopedMountedRoots = (): Set<InternalMounted> | undefined => {
+  if (!MOUNTED_ROOTS_SLOT_KEY) return undefined;
+  if (typeof domScopeApi.getCurrentScope !== 'function') return undefined;
+
+  const scope = domScopeApi.getCurrentScope();
+  const slot = scope?.getSlot?.<Set<InternalMounted>>(MOUNTED_ROOTS_SLOT_KEY);
+  return slot?.value;
+};
+
+const unmountMounted = (
+  mountedRoots: Set<InternalMounted>,
+  mounted: InternalMounted
+) => {
   try {
     act(() => {
       mounted.root?.unmount();
@@ -84,6 +168,7 @@ export const render = (
   ui: ReactElement,
   options: RenderOptions = {}
 ): RenderResult => {
+  const mountedRoots = getMountedRoots();
   const baseElement = options.baseElement || document.body;
   const container = options.container || document.createElement('div');
   const ownsContainer = !options.container;
@@ -109,7 +194,7 @@ export const render = (
 
   const unmount = () => {
     if (!mountedRoots.has(mounted)) return;
-    unmountMounted(mounted);
+    unmountMounted(mountedRoots, mounted);
   };
 
   const rerender = (nextUi: ReactElement) => {
@@ -173,9 +258,10 @@ export const renderHook = <
 };
 
 export const cleanup = () => {
-  for (const mounted of [...mountedRoots]) {
-    unmountMounted(mounted);
-  }
+  const scopedMountedRoots = getCurrentScopedMountedRoots();
+  if (scopedMountedRoots) cleanupMountedRoots(scopedMountedRoots);
+
+  cleanupMountedRoots(fallbackMountedRoots);
 
   metrics.flushMetricBuffer();
 };
