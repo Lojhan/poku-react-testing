@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/pokujs/react/compare/react-v1.4.0...react-v1.5.0) (2026-04-20)
+
+
+### Features
+
+* add concurrent scope isolation ([#19](https://github.com/pokujs/react/issues/19)) ([f8d7370](https://github.com/pokujs/react/commit/f8d73708d8adf8d32ec43d9eb94e54b43e969763))
+
 ## [1.4.0](https://github.com/pokujs/react/compare/react-v1.3.0...react-v1.4.0) (2026-04-05)
 
 
