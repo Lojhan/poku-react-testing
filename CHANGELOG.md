@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/pokujs/react/compare/react-v1.5.0...react-v1.5.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* use --preload for Bun instead of --import ([#22](https://github.com/pokujs/react/issues/22)) ([bd4a8dc](https://github.com/pokujs/react/commit/bd4a8dc0babcb711982da1fed58769fa20009f10))
+
 ## [1.5.0](https://github.com/pokujs/react/compare/react-v1.4.0...react-v1.5.0) (2026-04-20)
 
 
