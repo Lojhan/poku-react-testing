@@ -59,6 +59,23 @@ test('buildRunnerCommand injects deno preload and avoids duplicates', async () =
   ]);
 });
 
+test('buildRunnerCommand injects --preload for Bun (not --import)', async () => {
+  const result = buildRunnerCommand({
+    runtime: 'bun',
+    command: ['bun', 'tests/example.test.tsx'],
+    file: 'tests/example.test.tsx',
+    domSetupPath: '/tmp/react-dom-setup.ts',
+    runtimeOptionArgs: [],
+  });
+
+  assert.strictEqual(result.shouldHandle, true);
+  assert.deepStrictEqual(result.command, [
+    'bun',
+    '--preload /tmp/react-dom-setup.ts',
+    'tests/example.test.tsx',
+  ]);
+});
+
 test('buildRunnerCommand leaves unsupported runtime unchanged', async () => {
   const original = ['python', 'tests/example.test.tsx'];
   const result = buildRunnerCommand({

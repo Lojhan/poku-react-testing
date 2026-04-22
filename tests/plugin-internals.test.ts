@@ -59,7 +59,7 @@ test('buildRunnerCommand injects dom setup for bun without tsx import', async ()
   assert.strictEqual(result.shouldHandle, true);
   assert.deepStrictEqual(result.command, [
     'bun',
-    '--import=/tmp/dom-setup.ts',
+    '--preload /tmp/dom-setup.ts',
     'tests/example.test.tsx',
     '--poku-react-metrics=1',
   ]);
